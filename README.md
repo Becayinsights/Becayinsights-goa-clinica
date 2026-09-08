@@ -4,6 +4,11 @@ Panel de gestión de la consulta del Dr. Bengoa: agenda, pacientes, historia
 clínica, consentimientos y cobros. Es el reverso de la web (`Goaweb`): la web
 capta, esto gestiona.
 
+**En pie ahora mismo, en modo demostración:**
+[goa-citas-becay.vercel.app/reservar](https://goa-citas-becay.vercel.app/reservar)
+· panel en `/entrar`, con la clave a la vista. Nada de lo que se haga ahí se
+guarda: la base vive en memoria y se borra sola.
+
 **Estado: etapas 1 y 2.** Funciona el acceso, la ficha de paciente, la historia,
 la agenda y **la reserva pública**, que es lo que activa el botón «Reservar
 cita» de la web. Falta lo que está listado abajo.
@@ -60,6 +65,24 @@ El catálogo de tratamientos se siembra desde una copia de
 escriban en un sitio y lleguen a los dos. Cuando el back esté en producción,
 lo suyo es que la web lea de aquí y no al revés.
 
+## Modo demostración
+
+Sin `DATABASE_URL` la aplicación arranca contra una PGlite **en memoria**: se
+crea al vuelo, recibe estas mismas migraciones, se siembra con un día de consulta
+inventado y desaparece con el proceso. Sirve para enseñarla sin montar nada y sin
+guardar un solo dato.
+
+No es una maqueta aparte: es la aplicación, con su código. Por eso lo que se ve
+en la demostración es exactamente lo que hará con la base real.
+
+Dos límites que conviene saber al enseñarla:
+
+- Cada instancia del servidor tiene su propia copia. Si Vercel levanta una
+  segunda, puede enseñar un estado ligeramente distinto. Con el tráfico de una
+  demostración casi nunca pasa.
+- El primer acceso tras un rato dormida tarda algo más: está montando el esquema
+  y sembrando.
+
 ## Puesta en marcha sin pagar nada
 
 Todo lo de abajo tiene plan gratuito y ninguno pide tarjeta.
@@ -69,8 +92,12 @@ Todo lo de abajo tiene plan gratuito y ninguno pide tarjeta.
    conexión.
 2. **Repositorio.** Este proyecto en un repositorio **privado**. El de la web es
    público y ahí no puede vivir un panel de historias clínicas.
-3. **Vercel.** Proyecto nuevo apuntando a ese repositorio, con estas variables:
-   `DATABASE_URL` (la del paso 1) y `SECRETO` (`openssl rand -hex 32`).
+3. **Vercel.** El proyecto ya existe: `goa-citas`, enganchado a este
+   repositorio. Solo hay que añadirle dos variables: `DATABASE_URL` (la del paso
+   1) y `SECRETO` (`openssl rand -hex 32`). En cuanto tenga `DATABASE_URL` deja
+   de estar en demostración: el aviso desaparece solo y empieza a guardar.
+   Conviene además mover la región de la función a Frankfurt, para que esté
+   junto a la base y no al otro lado del Atlántico.
 4. **Preparar la base**, una sola vez y desde el portátil:
    ```bash
    DATABASE_URL=… npm run migrar
