@@ -15,6 +15,9 @@ const config: NextConfig = {
   poweredByHeader: false,
   /* PGlite solo se usa en desarrollo; que no entre en el paquete del servidor. */
   serverExternalPackages: ["@electric-sql/pglite", "postgres"],
+  /* El modo demostración levanta el esquema leyendo las migraciones, así que
+     los .sql tienen que viajar con el servidor y no quedarse en el repositorio. */
+  outputFileTracingIncludes: { "/**": ["./drizzle/**"] },
   async headers() {
     return [{ source: "/:ruta*", headers: cabeceras }];
   },

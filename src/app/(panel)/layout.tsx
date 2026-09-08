@@ -5,6 +5,7 @@ import * as e from "@/db/esquema";
 import { exigirUsuario } from "@/lib/sesion";
 import { limitesDelDia } from "@/lib/formato";
 import { Marca } from "../marca";
+import { Aviso } from "../aviso";
 import { salir } from "./acciones";
 
 export default async function Panel({ children }: { children: React.ReactNode }) {
@@ -38,7 +39,7 @@ export default async function Panel({ children }: { children: React.ReactNode })
           <form action={salir}><button className="btn linea mini">Cerrar sesión</button></form>
         </footer>
       </aside>
-      <main className="cuerpo">{children}</main>
+      <main className="cuerpo"><Aviso />{children}</main>
     </div>
   );
 }

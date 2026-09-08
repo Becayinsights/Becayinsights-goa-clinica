@@ -14,6 +14,10 @@ import * as esquema from "./esquema";
 
 export type BD = PostgresJsDatabase<typeof esquema>;
 
+/* Sin cadena de conexión no hay dónde guardar, así que la aplicación se enseña
+   en modo demostración: misma aplicación, base en memoria, nada persistente. */
+export const MODO_DEMO = !process.env.DATABASE_URL;
+
 let cache: Promise<BD> | null = null;
 
 async function abrir(): Promise<BD> {
@@ -32,10 +36,18 @@ async function abrir(): Promise<BD> {
     import("@electric-sql/pglite"),
     import("drizzle-orm/pglite"),
   ]);
-  const cliente = new PGlite(process.env.PGLITE_DIR ?? ".pgdata");
+  /* Con carpeta, es la base de desarrollo del portátil. Sin ella, memoria: la
+     demostración no deja rastro ni siquiera en el disco del servidor. */
+  const carpeta = process.env.PGLITE_DIR;
+  const cliente = carpeta ? new PGlite(carpeta) : new PGlite();
   /* Los dos drivers exponen la misma superficie de consulta; el tipo se unifica
      aquí para no arrastrar una unión por toda la aplicación. */
-  return drizzle(cliente, { schema: esquema }) as unknown as BD;
+  const db = drizzle(cliente, { schema: esquema }) as unknown as BD;
+  if (!carpeta) {
+    const { montarDemo } = await import("./demo");
+    await montarDemo(cliente, db);
+  }
+  return db;
 }
 
 export function bd(): Promise<BD> {

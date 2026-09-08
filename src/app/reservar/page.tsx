@@ -5,6 +5,7 @@ import * as e from "@/db/esquema";
 import { huecosLibres } from "@/lib/huecos";
 import { hora, diaLargo } from "@/lib/formato";
 import { Marca } from "../marca";
+import { Aviso } from "../aviso";
 import { Peticion } from "./formulario";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export default async function Reservar({ searchParams }: {
       <header>
         <Marca sub="Medical Aesthetics · Dr. Bengoa" />
       </header>
+      <Aviso />
 
       {!elegido ? (
         <>
