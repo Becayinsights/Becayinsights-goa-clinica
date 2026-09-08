@@ -1,0 +1,31 @@
+{
+  "name": "goa-clinica",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "migrar": "tsx src/db/migrar.ts",
+    "semilla": "tsx src/db/semilla.ts",
+    "generar": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "drizzle-orm": "^0.45.2",
+    "next": "^16.3.4",
+    "postgres": "^3.4.9",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "server-only": "^0.0.1",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.5.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3"
+  }
+}
