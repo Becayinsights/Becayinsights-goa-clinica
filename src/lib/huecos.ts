@@ -7,21 +7,12 @@
 import { and, gte, lt, ne } from "drizzle-orm";
 import { bd } from "@/db";
 import * as e from "@/db/esquema";
-import { ZONA } from "./formato";
+import { ZONA, instante } from "./formato";
 
 const PASO = 30;                       // los huecos se ofrecen en punto y media
 const MINIMO_HORAS = 12;               // nada para dentro de un rato: hay que verlo antes
 
 const ymd = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: ZONA }).format(d);
-
-/* Un instante a partir de un día y una hora de pared en la zona de la consulta.
-   Sin esto, en horario de verano el día empezaría dos horas antes o después. */
-function instante(dia: string, hhmm: string): Date {
-  const sonda = new Date(`${dia}T12:00:00Z`);
-  const off = new Intl.DateTimeFormat("en-US", { timeZone: ZONA, timeZoneName: "longOffset" })
-    .formatToParts(sonda).find((p) => p.type === "timeZoneName")!.value.replace("GMT", "") || "+00:00";
-  return new Date(`${dia}T${hhmm}${off}`);
-}
 
 export type Dia = { dia: string; huecos: Date[] };
 

@@ -19,6 +19,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import type { BD } from "./index";
 import * as e from "./esquema";
 import { sembrarCatalogo, sembrarHorario, sembrarUsuario } from "./sembrar";
+import { instante, ZONA } from "../lib/formato";
 
 export const DEMO_EMAIL = "doctor@goa.demo";
 export const DEMO_CLAVE = "demostracion";
@@ -80,6 +81,45 @@ export async function montarDemo(cliente: PGlite, db: BD) {
       duracionMin: t?.duracionMin ?? 45, estado: c.estado as any, pedidaEnWeb: !!c.web,
     });
   }
+
+  /* Lo que ya se hizo, con producto y lote: es lo que convierte la ficha en una
+     historia y no en una lista de citas. */
+  const actos: Array<{ p: number; t: string; cuando: Date; datos: Record<string, string>; cobro: [number, string] }> = [
+    { p: 1, t: "mesoterapia-capilar", cuando: a(-21, 11, 0),
+      datos: { producto: "Complejo vitamínico capilar", lote: "MC-2291", zonas: "Coronilla y línea media", dosis: "3 ml" },
+      cobro: [25000, "tarjeta"] },
+    { p: 0, t: "ojeras", cuando: a(-40, 10, 0),
+      datos: { producto: "Ácido hialurónico de baja reticulación", lote: "AH-7714", zonas: "Surco nasoyugal bilateral", dosis: "1 vial" },
+      cobro: [39000, "bizum"] },
+    { p: 5, t: "neuromoduladores", cuando: a(-62, 17, 0),
+      datos: { producto: "Toxina botulínica tipo A", lote: "TX-4180", zonas: "Maseteros", dosis: "50 U" },
+      cobro: [35000, "tarjeta"] },
+  ];
+
+  for (const x of actos) {
+    const t = porSlug(x.t);
+    const [acto] = await db.insert(e.acto).values({
+      pacienteId: ids[x.p], tratamientoId: t?.id ?? null, fecha: x.cuando, ...x.datos,
+    }).returning({ id: e.acto.id });
+    await db.insert(e.cobro).values({
+      pacienteId: ids[x.p], actoId: acto.id, fecha: x.cuando.toISOString().slice(0, 10),
+      concepto: t?.nombre ?? "Tratamiento", importeCents: x.cobro[0], metodo: x.cobro[1] as any,
+    });
+  }
+
+  /* Un cobro suelto: no todo el dinero cuelga de un tratamiento. */
+  await db.insert(e.cobro).values({
+    pacienteId: ids[1], fecha: a(-7, 12).toISOString().slice(0, 10),
+    concepto: "Segunda sesión de mesoterapia", importeCents: 25000, metodo: "efectivo",
+  });
+
+  /* Y unos días cerrados, para que se vea que el calendario los respeta. */
+  const ymd = (x: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: ZONA }).format(x);
+  await db.insert(e.bloqueo).values({
+    inicio: instante(ymd(a(24, 12)), "00:00:00"),
+    fin: instante(ymd(a(31, 12)), "23:59:59"),
+    motivo: "Congreso y vacaciones",
+  });
 
   await db.insert(e.nota).values([
     { pacienteId: ids[1], texto: "Patrón androgénico, escala III. Se empieza por tratamiento médico y mesoterapia; el injerto se valora a los seis meses, no antes." },

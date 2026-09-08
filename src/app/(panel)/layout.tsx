@@ -32,6 +32,8 @@ export default async function Panel({ children }: { children: React.ReactNode })
           <Link href="/solicitudes">Solicitudes {porConfirmar.n > 0 && <span className="pill">{porConfirmar.n}</span>}</Link>
           <Link href="/pacientes">Pacientes</Link>
           <Link href="/pacientes?estado=lead">Leads {leads.n > 0 && <span className="pill">{leads.n}</span>}</Link>
+          <Link href="/cobros">Cobros</Link>
+          <Link href="/ajustes">Ajustes</Link>
         </nav>
         <footer>
           {u.nombre}<br />

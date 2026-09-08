@@ -29,6 +29,13 @@ export function edad(nacimiento: string | null) {
   return a;
 }
 
+/* Un instante a partir de un día y una hora de pared en la zona de la consulta.
+   Sin esto, "el 5 de octubre a las 00:00" se interpreta con la hora del
+   servidor —UTC arriba— y el día empieza y acaba desplazado. */
+export function instante(dia: string, hhmm: string): Date {
+  return new Date(`${dia}T${hhmm}${desfase(new Date(`${dia}T12:00:00Z`))}`);
+}
+
 /* El día natural en la zona de la consulta, devuelto en instantes UTC: si se
    calcula con la hora del servidor, en verano el día empieza dos horas tarde. */
 export function limitesDelDia(base = new Date()) {

@@ -4,8 +4,8 @@ import { asc, desc, eq } from "drizzle-orm";
 import { bd } from "@/db";
 import * as e from "@/db/esquema";
 import { exigirUsuario, registrar } from "@/lib/sesion";
-import { diaHora, dia, edad } from "@/lib/formato";
-import { guardarPaciente, anotar, citar, cambiarCita } from "../../acciones";
+import { diaHora, dia, edad, euros } from "@/lib/formato";
+import { guardarPaciente, anotar, citar, cambiarCita, apuntarActo, apuntarCobro } from "../../acciones";
 
 export const dynamic = "force-dynamic";
 
@@ -20,14 +20,23 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
   /* Abrir una historia clínica es un acceso, y como tal queda anotado. */
   await registrar(u.id, "ver", "paciente", p.id);
 
-  const [citas, notas, tratamientos] = await Promise.all([
+  const [citas, notas, tratamientos, actos, cobros] = await Promise.all([
     db.select({ id: e.cita.id, inicio: e.cita.inicio, estado: e.cita.estado,
                 motivo: e.cita.motivo, tratamiento: e.tratamiento.nombre })
       .from(e.cita).leftJoin(e.tratamiento, eq(e.tratamiento.id, e.cita.tratamientoId))
       .where(eq(e.cita.pacienteId, id)).orderBy(desc(e.cita.inicio)),
     db.select().from(e.nota).where(eq(e.nota.pacienteId, id)).orderBy(desc(e.nota.creadaEn)),
     db.select().from(e.tratamiento).where(eq(e.tratamiento.activo, true)).orderBy(asc(e.tratamiento.orden)),
+    db.select({ id: e.acto.id, fecha: e.acto.fecha, producto: e.acto.producto, lote: e.acto.lote,
+                zonas: e.acto.zonas, dosis: e.acto.dosis, notas: e.acto.notas,
+                tratamiento: e.tratamiento.nombre })
+      .from(e.acto).leftJoin(e.tratamiento, eq(e.tratamiento.id, e.acto.tratamientoId))
+      .where(eq(e.acto.pacienteId, id)).orderBy(desc(e.acto.fecha)),
+    db.select().from(e.cobro).where(eq(e.cobro.pacienteId, id)).orderBy(desc(e.cobro.fecha)),
   ]);
+
+  const gastado = cobros.reduce((n, c) => n + c.importeCents, 0);
+  const hoy = new Date().toISOString().slice(0, 16);
 
   const años = edad(p.fechaNacimiento);
 
@@ -91,6 +100,65 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
             )}
           </section>
 
+          <section style={{ marginBottom: 30 }}>
+            <h2 style={{ marginBottom: 12 }}>Tratamientos realizados</h2>
+            <details className="plegable">
+              <summary>Apuntar uno</summary>
+              <form action={apuntarActo.bind(null, p.id)} className="tarjeta" style={{ marginTop: 10 }}>
+                <div className="campos">
+                  <div className="campo"><label htmlFor="a-trat">Qué se hizo</label>
+                    <select id="a-trat" name="tratamientoId" defaultValue="">
+                      <option value="">Sin concretar</option>
+                      {tratamientos.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                    </select></div>
+                  <div className="campo"><label htmlFor="a-fecha">Cuándo</label>
+                    <input id="a-fecha" name="fecha" type="datetime-local" defaultValue={hoy} /></div>
+                  <div className="campo"><label htmlFor="a-producto">Producto</label>
+                    <input id="a-producto" name="producto" placeholder="Marca y presentación" /></div>
+                  <div className="campo"><label htmlFor="a-lote">Lote</label>
+                    <input id="a-lote" name="lote" /></div>
+                  <div className="campo"><label htmlFor="a-zonas">Zonas</label>
+                    <input id="a-zonas" name="zonas" placeholder="Entrecejo, frente…" /></div>
+                  <div className="campo"><label htmlFor="a-dosis">Dosis</label>
+                    <input id="a-dosis" name="dosis" placeholder="Unidades o ml" /></div>
+                  <div className="campo"><label htmlFor="a-importe">Cobrado</label>
+                    <input id="a-importe" name="importe" inputMode="decimal" placeholder="350" /></div>
+                  <div className="campo"><label htmlFor="a-metodo">Método</label>
+                    <select id="a-metodo" name="metodo" defaultValue="tarjeta">
+                      <option value="tarjeta">Tarjeta</option><option value="efectivo">Efectivo</option>
+                      <option value="transferencia">Transferencia</option><option value="bizum">Bizum</option>
+                      <option value="financiado">Financiado</option>
+                    </select></div>
+                </div>
+                <div className="campo"><label htmlFor="a-notas">Observaciones</label>
+                  <textarea id="a-notas" name="notas" style={{ minHeight: 54 }} /></div>
+                <button className="btn">Apuntar</button>
+              </form>
+            </details>
+
+            {actos.length === 0 ? <p className="vacio">Todavía no se le ha hecho nada.</p> : (
+              <div className="rejilla" style={{ gap: 8 }}>
+                {actos.map((a) => (
+                  <article className="tarjeta" key={a.id}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                      <strong style={{ fontWeight: 500 }}>{a.tratamiento ?? "Tratamiento"}</strong>
+                      <span className="k">{dia(a.fecha)}</span>
+                    </div>
+                    {(a.producto || a.lote || a.zonas || a.dosis) && (
+                      <dl className="datos">
+                        {a.producto && <><dt>Producto</dt><dd>{a.producto}</dd></>}
+                        {a.lote && <><dt>Lote</dt><dd className="mono">{a.lote}</dd></>}
+                        {a.zonas && <><dt>Zonas</dt><dd>{a.zonas}</dd></>}
+                        {a.dosis && <><dt>Dosis</dt><dd>{a.dosis}</dd></>}
+                      </dl>
+                    )}
+                    {a.notas && <p style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>{a.notas}</p>}
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
           <section>
             <h2 style={{ marginBottom: 12 }}>Historia</h2>
             <form action={anotar.bind(null, p.id)} style={{ marginBottom: 16 }}>
@@ -137,6 +205,48 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
             <textarea id="f-notas" name="notas" defaultValue={p.notas ?? ""} style={{ minHeight: 54 }} /></div>
           <button className="btn">Guardar</button>
         </form>
+
+        <section className="tarjeta" style={{ marginTop: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <h3>Cobros</h3>
+            <span style={{ fontFamily: "var(--serif)", fontSize: 22 }}>{euros(gastado)}</span>
+          </div>
+          {cobros.length === 0
+            ? <p className="vacio" style={{ padding: "10px 0" }}>Sin cobros apuntados.</p>
+            : (
+              <ul className="cobros">
+                {cobros.map((c) => (
+                  <li key={c.id}>
+                    <span>
+                      {c.concepto}
+                      <em className="silencio">{dia(new Date(`${c.fecha}T12:00:00Z`))} · {c.metodo}</em>
+                    </span>
+                    <span>{euros(c.importeCents)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          <details className="plegable" style={{ marginTop: 10 }}>
+            <summary>Apuntar un cobro suelto</summary>
+            <form action={apuntarCobro.bind(null, p.id)} style={{ marginTop: 10 }}>
+              <div className="campos">
+                <div className="campo"><label htmlFor="c-fecha">Fecha</label>
+                  <input id="c-fecha" name="fecha" type="date" defaultValue={hoy.slice(0, 10)} /></div>
+                <div className="campo"><label htmlFor="c-importe">Importe</label>
+                  <input id="c-importe" name="importe" inputMode="decimal" required /></div>
+              </div>
+              <div className="campo"><label htmlFor="c-concepto">Concepto</label>
+                <input id="c-concepto" name="concepto" placeholder="Sesión suelta, anticipo…" /></div>
+              <div className="campo"><label htmlFor="c-metodo">Método</label>
+                <select id="c-metodo" name="metodo" defaultValue="tarjeta">
+                  <option value="tarjeta">Tarjeta</option><option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option><option value="bizum">Bizum</option>
+                  <option value="financiado">Financiado</option>
+                </select></div>
+              <button className="btn">Apuntar cobro</button>
+            </form>
+          </details>
+        </section>
       </div>
     </>
   );

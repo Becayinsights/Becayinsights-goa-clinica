@@ -186,3 +186,30 @@ textarea{min-height:88px;resize:vertical;line-height:1.5}
   transition:border-color .2s ease,background .2s ease;
 }
 .hueco:hover{border-color:var(--accent);background:var(--accent-suave)}
+
+/* ── Horario semanal ──────────────────────────────────────────── */
+.horario td{padding:6px 10px 6px 0;border-bottom:1px solid var(--rule)}
+.horario th{padding-bottom:8px}
+.par{display:flex;gap:6px}
+.par input{padding:6px 8px;font-size:var(--fs-3)}
+
+/* ── Piezas de la ficha ───────────────────────────────────────── */
+/* Los formularios de apuntar van plegados: la ficha se abre para leer, no para
+   escribir, y un formulario desplegado empuja hacia abajo lo que se viene a ver. */
+.plegable summary{
+  font-family:var(--mono);font-size:var(--fs-2);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);cursor:pointer;padding:6px 0;list-style:none;
+}
+.plegable summary::-webkit-details-marker{display:none}
+.plegable summary::before{content:"+ ";color:var(--accent-text)}
+.plegable[open] summary::before{content:"− "}
+.plegable summary:hover{color:var(--ink)}
+
+.datos{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:10px 0 0;font-size:var(--fs-3)}
+.datos dt{font-family:var(--mono);font-size:var(--fs-1);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);padding-top:2px}
+.datos dd{margin:0}
+
+.cobros{list-style:none;padding:0;margin:12px 0 0;font-size:var(--fs-3)}
+.cobros li{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid var(--rule)}
+.cobros em{display:block;font-style:normal;font-family:var(--mono);font-size:var(--fs-1);margin-top:2px}
