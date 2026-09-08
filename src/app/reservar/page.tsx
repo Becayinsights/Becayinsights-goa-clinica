@@ -7,18 +7,19 @@ import { hora, diaLargo } from "@/lib/formato";
 import { Marca } from "../marca";
 import { Aviso } from "../aviso";
 import { Peticion } from "./formulario";
+import { Calendario } from "./calendario";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pedir cita · GOA", robots: { index: false } };
 
-/* Tres pasos en tres pantallas servidas por el servidor: elegir tratamiento,
-   elegir hueco y dejar el contacto. Sin calendario interactivo ni JavaScript de
-   más: quien pide cita para una consulta médica lo hace una vez, no necesita
-   una aplicación. */
+/* Tres pasos servidos por el servidor: elegir tratamiento, elegir día y hora en
+   el calendario, y dejar el contacto. Todo con enlaces y sin componente de
+   calendario: quien pide cita en una consulta lo hace una vez, y un enlace
+   funciona con el botón de atrás y se puede mandar por WhatsApp tal cual. */
 export default async function Reservar({ searchParams }: {
-  searchParams: Promise<{ t?: string; h?: string }>;
+  searchParams: Promise<{ t?: string; h?: string; d?: string; m?: string }>;
 }) {
-  const { t: slug, h } = await searchParams;
+  const { t: slug, h, d, m } = await searchParams;
   const db = await bd();
   const tratamientos = await db.select().from(e.tratamiento)
     .where(eq(e.tratamiento.reservableOnline, true)).orderBy(asc(e.tratamiento.orden));
@@ -49,7 +50,7 @@ export default async function Reservar({ searchParams }: {
           </div>
         </>
       ) : !h ? (
-        <Huecos tratamiento={elegido} />
+        <Huecos tratamiento={elegido} dia={d} mes={m} />
       ) : (
         <>
           <h1>Tus datos</h1>
@@ -65,30 +66,42 @@ export default async function Reservar({ searchParams }: {
   );
 }
 
-async function Huecos({ tratamiento }: { tratamiento: { id: string; slug: string; nombre: string; duracionMin: number } }) {
+async function Huecos({ tratamiento, dia, mes }: {
+  tratamiento: { id: string; slug: string; nombre: string; duracionMin: number };
+  dia?: string; mes?: string;
+}) {
   const dias = await huecosLibres(tratamiento.duracionMin);
+
+  if (!dias.length) {
+    return (
+      <>
+        <h1>{tratamiento.nombre}</h1>
+        <p className="entrada">
+          Ahora mismo no hay huecos publicados. Escribe a la consulta y se busca hueco.
+        </p>
+        <p><Link className="silencio" href="/reservar">← Elegir otro tratamiento</Link></p>
+      </>
+    );
+  }
+
+  /* Si todavía no se ha elegido nada, se abre por el primer día con hueco y con
+     sus horas ya a la vista: un calendario que abre vacío obliga a adivinar
+     dónde hay algo. Y al cambiar de mes no se arrastra el día del mes anterior. */
+  const libres = new Set(dias.map((x) => x.dia));
+  const elegido = dia && libres.has(dia) ? dia : dias[0].dia;
+  const visible = mes && dias.some((x) => x.dia.startsWith(mes)) ? mes : elegido.slice(0, 7);
+  const marcado = visible === elegido.slice(0, 7) ? elegido : undefined;
+
   return (
     <>
       <h1>{tratamiento.nombre}</h1>
       <p className="entrada">
-        {dias.length
-          ? `Elige el día y la hora que mejor te venga. La cita dura ${tratamiento.duracionMin} minutos.`
-          : "Ahora mismo no hay huecos publicados. Escribe a la consulta y se busca hueco."}
+        Elige el día y la hora que mejor te venga. La cita dura {tratamiento.duracionMin} minutos.
       </p>
-      {dias.map((d) => (
-        <section key={d.dia} className="dia">
-          <h2>{diaLargo(new Date(`${d.dia}T12:00:00Z`))}</h2>
-          <div className="horas">
-            {d.huecos.map((x) => (
-              <Link className="hueco" key={+x}
-                    href={`/reservar?t=${tratamiento.slug}&h=${encodeURIComponent(x.toISOString())}`}>
-                {hora(x)}
-              </Link>
-            ))}
-          </div>
-        </section>
-      ))}
-      <p style={{ marginTop: 24 }}><Link className="silencio" href="/reservar">← Elegir otro tratamiento</Link></p>
+      <Calendario slug={tratamiento.slug} dias={dias} mes={visible} elegido={marcado} />
+      <p style={{ marginTop: 26 }}>
+        <Link className="silencio" href="/reservar">← Elegir otro tratamiento</Link>
+      </p>
     </>
   );
 }

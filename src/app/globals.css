@@ -141,7 +141,44 @@ textarea{min-height:88px;resize:vertical;line-height:1.5}
 }
 .opcion:hover{border-color:var(--accent)}
 .opcion .silencio{font-family:var(--mono);font-size:var(--fs-2)}
-.dia{margin-bottom:26px}
+/* Calendario de mes. Cuadrícula de siete, como cualquier calendario: si no son
+   siete columnas, deja de leerse de un vistazo por mucho que quepa mejor. */
+.cal{border:1px solid var(--rule);border-radius:4px;background:var(--panel);padding:14px 16px 18px}
+.cal-mes{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;
+}
+.cal-mes strong{font-family:var(--serif);font-size:var(--fs-6);font-weight:400}
+.cal-mes a,.cal-mes span{
+  font-size:20px;line-height:1;text-decoration:none;color:var(--ink-2);
+  width:32px;height:32px;display:grid;place-items:center;border-radius:2px;
+}
+.cal-mes a:hover{background:var(--paper-3);color:var(--ink)}
+.cal-mes span{color:var(--rule-2)}          /* mes sin salida: apagado, no ausente */
+.cal-rej{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-cab{
+  font-family:var(--mono);font-size:var(--fs-1);letter-spacing:.1em;color:var(--ink-3);
+  text-align:center;padding-bottom:6px;
+}
+.cal-dia{
+  aspect-ratio:1;display:grid;place-items:center;border-radius:3px;
+  font-size:var(--fs-4);text-decoration:none;
+}
+.cal-dia.vacio{visibility:hidden}
+.cal-dia.cerrado{color:var(--ink-3);opacity:.42}
+.cal-dia.libre{
+  color:var(--ink);border:1px solid var(--rule-2);background:var(--paper);
+  transition:border-color .2s ease,background .2s ease;
+}
+.cal-dia.libre:hover{border-color:var(--accent);background:var(--accent-suave)}
+.cal-dia.elegido{background:var(--accent);border-color:var(--accent);color:#F6F4EE;font-weight:500}
+/* Hoy se marca con un punto y no con color: el color ya significa "elegido". */
+.cal-dia.hoy{position:relative}
+.cal-dia.hoy::after{
+  content:"";position:absolute;bottom:5px;width:3px;height:3px;border-radius:50%;
+  background:currentColor;opacity:.6;
+}
+.cal-horas{margin-top:22px}
+.cal-horas h2{margin-bottom:12px}
 .horas{display:flex;flex-wrap:wrap;gap:8px}
 .hueco{
   font-family:var(--mono);font-size:var(--fs-3);text-decoration:none;

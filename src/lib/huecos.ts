@@ -25,7 +25,9 @@ function instante(dia: string, hhmm: string): Date {
 
 export type Dia = { dia: string; huecos: Date[] };
 
-export async function huecosLibres(duracionMin: number, dias = 21): Promise<Dia[]> {
+/* Dos meses por delante: lo que cabe en el calendario sin que la agenda se
+   convierta en una promesa a demasiado plazo. */
+export async function huecosLibres(duracionMin: number, dias = 62): Promise<Dia[]> {
   const db = await bd();
   const desde = new Date(Date.now() + MINIMO_HORAS * 3600_000);
   const hasta = new Date(Date.now() + dias * 86400_000);
