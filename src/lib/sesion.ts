@@ -9,8 +9,10 @@ import "server-only";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, eq, gt, lt, desc, count } from "drizzle-orm";
-import { bd } from "@/db";
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { bd, MODO_DEMO } from "@/db";
 import * as e from "@/db/esquema";
+import { DEMO_EMAIL } from "@/db/demo";
 import { nuevoTestigo, resumen } from "./clave";
 
 const COOKIE = "goa_sesion";
@@ -18,12 +20,41 @@ const HORAS = 8;
 
 export type Usuario = { id: string; email: string; nombre: string; rol: "doctor" | "recepcion" };
 
+/* ─────────── La sesión de la demostración ───────────
+ *
+ * En demostración la sesión no puede guardarse en la base, porque la base es de
+ * memoria y cada instancia del servidor tiene la suya: la sesión abierta en una
+ * no existe en la siguiente, y el panel devolvía a la puerta al primer clic.
+ *
+ * Aquí la sesión es una cookie firmada, que cualquier instancia puede comprobar
+ * sin compartir nada. La clave de firma es constante y está escrita en el
+ * código a propósito: no protege ningún dato —en demostración no hay ninguno— y
+ * la contraseña ya va impresa en la pantalla de entrada. Con DATABASE_URL nada
+ * de esto se usa: la sesión vuelve a la base, que es donde debe estar. */
+const CLAVE_DEMO = "goa-demostracion-sin-datos";
+
+const firmaDemo = (caduca: number) =>
+  createHmac("sha256", CLAVE_DEMO).update(String(caduca)).digest("base64url");
+
+function demoValido(testigo: string): boolean {
+  const [txt, firma] = testigo.split(".");
+  const caduca = Number(txt);
+  if (!firma || !Number.isFinite(caduca) || caduca < Date.now()) return false;
+  const a = Buffer.from(firma), b = Buffer.from(firmaDemo(caduca));
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export async function crearSesion(usuarioId: string) {
-  const testigo = nuevoTestigo();
   const expira = new Date(Date.now() + HORAS * 3600_000);
-  const db = await bd();
-  const agente = (await headers()).get("user-agent")?.slice(0, 200) ?? null;
-  await db.insert(e.sesion).values({ id: resumen(testigo), usuarioId, expiraEn: expira, agente });
+  const testigo = MODO_DEMO
+    ? `${+expira}.${firmaDemo(+expira)}`
+    : nuevoTestigo();
+
+  if (!MODO_DEMO) {
+    const db = await bd();
+    const agente = (await headers()).get("user-agent")?.slice(0, 200) ?? null;
+    await db.insert(e.sesion).values({ id: resumen(testigo), usuarioId, expiraEn: expira, agente });
+  }
   (await cookies()).set(COOKIE, testigo, {
     httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production",
     path: "/", expires: expira,
@@ -34,6 +65,14 @@ export async function usuarioActual(): Promise<Usuario | null> {
   const testigo = (await cookies()).get(COOKIE)?.value;
   if (!testigo) return null;
   const db = await bd();
+
+  if (MODO_DEMO) {
+    if (!demoValido(testigo)) return null;
+    /* El usuario se busca por correo y no por identificador: cada instancia
+       siembra el suyo y los identificadores no coinciden entre ellas. */
+    const [u] = await db.select().from(e.usuario).where(eq(e.usuario.email, DEMO_EMAIL));
+    return u && u.activo ? { id: u.id, email: u.email, nombre: u.nombre, rol: u.rol } : null;
+  }
   const filas = await db.select({
       id: e.usuario.id, email: e.usuario.email, nombre: e.usuario.nombre,
       rol: e.usuario.rol, activo: e.usuario.activo, expira: e.sesion.expiraEn, sid: e.sesion.id,
@@ -66,7 +105,7 @@ export async function exigirUsuario(): Promise<Usuario> {
 export async function cerrarSesion() {
   const galletas = await cookies();
   const testigo = galletas.get(COOKIE)?.value;
-  if (testigo) {
+  if (testigo && !MODO_DEMO) {
     const db = await bd();
     await db.delete(e.sesion).where(eq(e.sesion.id, resumen(testigo)));
   }
