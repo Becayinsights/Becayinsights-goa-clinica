@@ -6,7 +6,12 @@ const f = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("es-ES", { 
 
 export const hora = (d: Date) => f({ hour: "2-digit", minute: "2-digit" }).format(d);
 export const dia = (d: Date) => f({ day: "2-digit", month: "2-digit", year: "numeric" }).format(d);
-export const diaLargo = (d: Date) => f({ weekday: "long", day: "numeric", month: "long" }).format(d);
+/* "martes, 8 de septiembre" con la inicial en mayúscula. Con capitalize de CSS
+   saldría "8 De Septiembre": el navegador no sabe qué palabras son nombres. */
+export const diaLargo = (d: Date) => {
+  const t = f({ weekday: "long", day: "numeric", month: "long" }).format(d);
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
 export const diaHora = (d: Date) => `${dia(d)} · ${hora(d)}`;
 
 export function euros(cents: number | null | undefined) {

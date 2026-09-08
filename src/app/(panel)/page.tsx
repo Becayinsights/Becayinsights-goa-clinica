@@ -42,7 +42,7 @@ export default async function Hoy() {
       <div className="cabeza">
         <div>
           <p className="eyebrow">Hoy</p>
-          <h1 style={{ textTransform: "capitalize" }}>{diaLargo(new Date())}</h1>
+          <h1>{diaLargo(new Date())}</h1>
         </div>
         <Link className="btn" href="/pacientes/nuevo">Nuevo paciente</Link>
       </div>

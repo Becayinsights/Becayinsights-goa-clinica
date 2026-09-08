@@ -53,7 +53,7 @@ export default async function Agenda({ searchParams }: { searchParams: Promise<{
           const delDia = citas.filter((c) => ymd(c.inicio) === ymd(dd));
           return (
             <section className="tarjeta" key={ymd(dd)} style={{ minHeight: 130 }}>
-              <div className="k" style={{ marginBottom: 10, textTransform: "capitalize" }}>{diaLargo(dd)}</div>
+              <div className="k" style={{ marginBottom: 10 }}>{diaLargo(dd)}</div>
               {delDia.length === 0 ? <p className="silencio" style={{ fontSize: "var(--fs-3)" }}>—</p> : delDia.map((c) => (
                 <div key={c.id} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: "1px solid var(--rule)" }}>
                   <span className="mono" style={{ fontSize: "var(--fs-3)" }}>{hora(c.inicio)}</span>{" "}

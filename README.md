@@ -4,8 +4,9 @@ Panel de gestión de la consulta del Dr. Bengoa: agenda, pacientes, historia
 clínica, consentimientos y cobros. Es el reverso de la web (`Goaweb`): la web
 capta, esto gestiona.
 
-**Estado: etapa 1 de 4.** Funciona el acceso, la ficha de paciente, la historia
-y la agenda. Falta lo que está listado abajo.
+**Estado: etapas 1 y 2.** Funciona el acceso, la ficha de paciente, la historia,
+la agenda y **la reserva pública**, que es lo que activa el botón «Reservar
+cita» de la web. Falta lo que está listado abajo.
 
 ## Lo primero, y no es un formalismo
 
@@ -59,12 +60,35 @@ El catálogo de tratamientos se siembra desde una copia de
 escriban en un sitio y lleguen a los dos. Cuando el back esté en producción,
 lo suyo es que la web lea de aquí y no al revés.
 
-## Lo que falta
+## Puesta en marcha sin pagar nada
 
-**Etapa 2 — reservas online.** Página pública de reserva, huecos calculados
-restando citas y bloqueos a las franjas de `horario`, y la solicitud entrando
-como `cita` en estado `solicitada`. Freno por IP y teléfono obligatorio, o la
-agenda se llena de citas falsas.
+Todo lo de abajo tiene plan gratuito y ninguno pide tarjeta.
+
+1. **Base de datos.** Crear un proyecto gratis en [Neon](https://neon.tech) —o
+   Supabase, da igual— **en una región de la UE**, y copiar la cadena de
+   conexión.
+2. **Repositorio.** Este proyecto en un repositorio **privado**. El de la web es
+   público y ahí no puede vivir un panel de historias clínicas.
+3. **Vercel.** Proyecto nuevo apuntando a ese repositorio, con estas variables:
+   `DATABASE_URL` (la del paso 1) y `SECRETO` (`openssl rand -hex 32`).
+4. **Preparar la base**, una sola vez y desde el portátil:
+   ```bash
+   DATABASE_URL=… npm run migrar
+   DATABASE_URL=… ADMIN_EMAIL=… ADMIN_CLAVE=… npm run semilla
+   ```
+   La contraseña tiene que tener doce caracteres o más; el script no acepta menos.
+5. **La web apunta aquí.** En el repositorio de la web:
+   `RESERVAS=https://<lo-que-sea>.vercel.app/reservar python3 build.py`
+
+Dos cosas que conviene tener claras y no descubrir tarde:
+
+- El plan **Hobby de Vercel no permite uso comercial** según sus propias
+  condiciones. Técnicamente funciona; contractualmente, para una consulta que
+  cobra, hace falta Pro. Es una decisión de negocio, no técnica.
+- El plan gratuito de Neon **duerme la base tras un rato sin uso**. La primera
+  visita después de dormir tarda un segundo de más. Para pedir cita no importa.
+
+## Lo que falta
 
 **Etapa 3 — consentimientos y fotos.** Subida a almacenamiento privado, servida
 por una ruta que comprueba la sesión. Las tablas `documento` y `foto` ya están;

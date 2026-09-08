@@ -115,3 +115,29 @@ textarea{min-height:88px;resize:vertical;line-height:1.5}
 .puerta{min-height:100vh;display:grid;place-items:center;padding:24px}
 .puerta form{width:100%;max-width:352px}
 .puerta .marca{justify-content:center;margin-bottom:26px;font-size:26px}
+
+/* ── Pedir cita: la única pantalla pública ────────────────────────
+   Aquí no manda la densidad sino la calma: es la misma página que la web y
+   quien la ve está decidiendo si viene. */
+.reserva{max-width:660px;margin:0 auto;padding:38px 22px 80px}
+.reserva header{margin-bottom:36px}
+.reserva h1{margin-bottom:14px}
+.reserva h2{font-size:var(--fs-5);margin-bottom:10px}
+.entrada{font-family:var(--serif);font-size:19px;line-height:1.45;color:var(--ink-2);
+  max-width:46ch;margin-bottom:30px}
+.opciones{display:grid;gap:8px}
+.opcion{
+  display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;
+  text-decoration:none;background:var(--panel);border:1px solid var(--rule);border-radius:4px;
+  padding:15px 18px;transition:border-color .2s ease;
+}
+.opcion:hover{border-color:var(--accent)}
+.opcion .silencio{font-family:var(--mono);font-size:var(--fs-2)}
+.dia{margin-bottom:26px}
+.horas{display:flex;flex-wrap:wrap;gap:8px}
+.hueco{
+  font-family:var(--mono);font-size:var(--fs-3);text-decoration:none;
+  border:1px solid var(--rule-2);border-radius:2px;padding:9px 13px;background:var(--panel);
+  transition:border-color .2s ease,background .2s ease;
+}
+.hueco:hover{border-color:var(--accent);background:var(--accent-suave)}
