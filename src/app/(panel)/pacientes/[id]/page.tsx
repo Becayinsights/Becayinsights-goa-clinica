@@ -29,6 +29,7 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
     db.select().from(e.tratamiento).where(eq(e.tratamiento.activo, true)).orderBy(asc(e.tratamiento.orden)),
     db.select({ id: e.acto.id, fecha: e.acto.fecha, producto: e.acto.producto, lote: e.acto.lote,
                 zonas: e.acto.zonas, dosis: e.acto.dosis, notas: e.acto.notas,
+                recordarEn: e.acto.recordarEn, recordado: e.acto.recordado,
                 tratamiento: e.tratamiento.nombre })
       .from(e.acto).leftJoin(e.tratamiento, eq(e.tratamiento.id, e.acto.tratamientoId))
       .where(eq(e.acto.pacienteId, id)).orderBy(desc(e.acto.fecha)),
@@ -48,7 +49,9 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
           <h1>{p.nombre} {p.apellidos ?? ""}</h1>
           <p className="silencio" style={{ fontSize: "var(--fs-3)", marginTop: 6 }}>
             <span className={`etiqueta ${p.estado}`}>{p.estado}</span>{" "}
+            <span className="mono">Nº {String(p.numero).padStart(4, "0")}</span> ·{" "}
             {años != null && `${años} años · `}
+            {p.documento ? `${p.documento} · ` : ""}
             {p.telefono ?? "sin teléfono"}{p.email ? ` · ${p.email}` : ""} · alta {dia(p.creadoEn)}
           </p>
         </div>
@@ -123,6 +126,8 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
                     <input id="a-dosis" name="dosis" placeholder="Unidades o ml" /></div>
                   <div className="campo"><label htmlFor="a-importe">Cobrado</label>
                     <input id="a-importe" name="importe" inputMode="decimal" placeholder="350" /></div>
+                  <div className="campo"><label htmlFor="a-recordar">Repetir a los… (meses)</label>
+                    <input id="a-recordar" name="recordarMeses" inputMode="numeric" placeholder="5" /></div>
                   <div className="campo"><label htmlFor="a-metodo">Método</label>
                     <select id="a-metodo" name="metodo" defaultValue="tarjeta">
                       <option value="tarjeta">Tarjeta</option><option value="efectivo">Efectivo</option>
@@ -153,6 +158,12 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
                       </dl>
                     )}
                     {a.notas && <p style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>{a.notas}</p>}
+                    {a.recordarEn && (
+                      <p className="recordatorio">
+                        Toca repetirlo el {dia(new Date(`${a.recordarEn}T12:00:00Z`))}
+                        {a.recordado ? " · avisado" : ""}
+                      </p>
+                    )}
                   </article>
                 ))}
               </div>
@@ -190,6 +201,8 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
               <input id="f-email" name="email" type="email" defaultValue={p.email ?? ""} /></div>
             <div className="campo"><label htmlFor="f-nac">Nacimiento</label>
               <input id="f-nac" name="fechaNacimiento" type="date" defaultValue={p.fechaNacimiento ?? ""} /></div>
+            <div className="campo"><label htmlFor="f-dni">DNI o NIE</label>
+              <input id="f-dni" name="documento" defaultValue={p.documento ?? ""} autoCapitalize="characters" /></div>
             <div className="campo"><label htmlFor="f-estado">Estado</label>
               <select id="f-estado" name="estado" defaultValue={p.estado}>
                 <option value="lead">Lead</option>

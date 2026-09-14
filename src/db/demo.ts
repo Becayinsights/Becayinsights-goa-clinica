@@ -45,19 +45,21 @@ export async function montarDemo(cliente: PGlite, db: BD) {
   const a = (dias: number, h: number, m = 0) =>
     new Date(hoy.getTime() + dias * 86400_000 + h * 3600_000 + m * 60_000);
 
-  const gente: Array<[string, string, string, "lead" | "paciente", string | null]> = [
-    ["Ana R.",     "600 111 222", "instagram",     "paciente", "Ojeras marcadas desde hace un par de años."],
-    ["Carlos M.",  "600 222 333", "web",           "paciente", "Entradas y pérdida de densidad en la coronilla."],
-    ["Lucía P.",   "600 333 444", "recomendacion", "paciente", "Quiere valorar los labios sin que se note."],
-    ["Javier S.",  "600 444 555", "web",           "lead",     "Pregunta por injerto capilar."],
-    ["Marta L.",   "600 555 666", "web",           "lead",     "Rinomodelación; pide precio y si duele."],
-    ["Diego F.",   "600 666 777", "consulta",      "paciente", "Bruxismo, viene derivado del dentista."],
+  /* Los documentos son inventados y no corresponden a nadie: las letras no
+     cuadran con el número, que es justo lo que los hace inválidos. */
+  const gente: Array<[string, string, string, string, "lead" | "paciente", string | null]> = [
+    ["Ana R.",     "600 111 222", "00000001A", "instagram",     "paciente", "Ojeras marcadas desde hace un par de años."],
+    ["Carlos M.",  "600 222 333", "00000002A", "web",           "paciente", "Entradas y pérdida de densidad en la coronilla."],
+    ["Lucía P.",   "600 333 444", "00000003A", "recomendacion", "paciente", "Quiere valorar los labios sin que se note."],
+    ["Javier S.",  "600 444 555", "",          "web",           "lead",     "Pregunta por injerto capilar."],
+    ["Marta L.",   "600 555 666", "",          "web",           "lead",     "Rinomodelación; pide precio y si duele."],
+    ["Diego F.",   "600 666 777", "00000004A", "consulta",      "paciente", "Bruxismo, viene derivado del dentista."],
   ];
 
   const ids: string[] = [];
-  for (const [nombre, telefono, origen, estado, motivo] of gente) {
+  for (const [nombre, telefono, documento, origen, estado, motivo] of gente) {
     const [p] = await db.insert(e.paciente)
-      .values({ nombre, telefono, origen: origen as any, estado, motivo })
+      .values({ nombre, telefono, documento: documento || null, origen: origen as any, estado, motivo })
       .returning({ id: e.paciente.id });
     ids.push(p.id);
   }
@@ -65,7 +67,7 @@ export async function montarDemo(cliente: PGlite, db: BD) {
   const citas = [
     { p: 0, t: "ojeras",                     cuando: a(0, 10, 30), estado: "confirmada" },
     { p: 1, t: "mesoterapia-capilar",        cuando: a(0, 11, 30), estado: "confirmada" },
-    { p: 5, t: "neuromoduladores",           cuando: a(0, 16, 0),  estado: "confirmada" },
+    { p: 5, t: "tratamiento-anti-arrugas",   cuando: a(0, 16, 0),  estado: "confirmada" },
     { p: 2, t: "labios",                     cuando: a(1, 12, 0),  estado: "confirmada" },
     { p: 1, t: "mesoterapia-capilar",        cuando: a(-21, 11, 0), estado: "hecha" },
     { p: 0, t: "ojeras",                     cuando: a(-40, 10, 0), estado: "hecha" },
@@ -84,22 +86,27 @@ export async function montarDemo(cliente: PGlite, db: BD) {
 
   /* Lo que ya se hizo, con producto y lote: es lo que convierte la ficha en una
      historia y no en una lista de citas. */
-  const actos: Array<{ p: number; t: string; cuando: Date; datos: Record<string, string>; cobro: [number, string] }> = [
+  const actos: Array<{ p: number; t: string; cuando: Date; datos: Record<string, string>;
+                       cobro: [number, string]; repetir?: number }> = [
     { p: 1, t: "mesoterapia-capilar", cuando: a(-21, 11, 0),
       datos: { producto: "Complejo vitamínico capilar", lote: "MC-2291", zonas: "Coronilla y línea media", dosis: "3 ml" },
       cobro: [25000, "tarjeta"] },
     { p: 0, t: "ojeras", cuando: a(-40, 10, 0),
       datos: { producto: "Ácido hialurónico de baja reticulación", lote: "AH-7714", zonas: "Surco nasoyugal bilateral", dosis: "1 vial" },
       cobro: [39000, "bizum"] },
-    { p: 5, t: "neuromoduladores", cuando: a(-62, 17, 0),
+    /* Este toca repetirlo ya: es lo que hace que el recordatorio se vea. */
+    { p: 5, t: "tratamiento-anti-arrugas", cuando: a(-150, 17, 0),
       datos: { producto: "Toxina botulínica tipo A", lote: "TX-4180", zonas: "Maseteros", dosis: "50 U" },
-      cobro: [35000, "tarjeta"] },
+      cobro: [35000, "tarjeta"], repetir: 5 },
   ];
 
   for (const x of actos) {
     const t = porSlug(x.t);
+    const repetir = x.repetir
+      ? new Date(new Date(x.cuando).setMonth(x.cuando.getMonth() + x.repetir)).toISOString().slice(0, 10)
+      : null;
     const [acto] = await db.insert(e.acto).values({
-      pacienteId: ids[x.p], tratamientoId: t?.id ?? null, fecha: x.cuando, ...x.datos,
+      pacienteId: ids[x.p], tratamientoId: t?.id ?? null, fecha: x.cuando, recordarEn: repetir, ...x.datos,
     }).returning({ id: e.acto.id });
     await db.insert(e.cobro).values({
       pacienteId: ids[x.p], actoId: acto.id, fecha: x.cuando.toISOString().slice(0, 10),

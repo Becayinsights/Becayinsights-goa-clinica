@@ -117,10 +117,18 @@ Dos cosas que conviene tener claras y no descubrir tarde:
 
 ## Lo que falta
 
-**Etapa 3 — consentimientos y fotos.** Subida a almacenamiento privado, servida
-por una ruta que comprueba la sesión. Las tablas `documento` y `foto` ya están;
-falta el almacén y las pantallas. Cada foto lleva aparte si el paciente autorizó
-publicarla: guardarla y poder enseñarla son dos permisos distintos.
+**Etapa 3 — consentimientos y fotos.** Lo siguiente, y lo que el doctor ha
+pedido por escrito: adjuntar fotografías a la ficha y tener los consentimientos
+informados dentro del programa, **firmados en una tablet** y guardados ya
+firmados. Las tablas `documento` y `foto` están puestas; falta el almacén, la
+firma y las pantallas.
+
+Recomendación para cuando toque: los PDF de consentimiento pesan poco y pueden
+vivir en la propia base de datos, lo que evita contratar un servicio más y deja
+todo en un único sitio que respaldar. Las fotos clínicas no: pesan, y ahí sí
+hace falta almacenamiento de objetos. Cada foto lleva aparte si el paciente
+autorizó publicarla, porque guardarla y poder enseñarla son dos permisos
+distintos.
 
 **Etapa 4 — cobros y cuadro de mando.** Tabla `cobro` puesta; faltan las
 pantallas y los totales por paciente y periodo. Es registro de cobros, no

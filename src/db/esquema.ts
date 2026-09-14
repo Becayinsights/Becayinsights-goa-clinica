@@ -13,7 +13,7 @@
  */
 import {
   pgTable, pgEnum, uuid, text, timestamp, integer, boolean,
-  date, index, uniqueIndex, time,
+  date, index, uniqueIndex, time, serial,
 } from "drizzle-orm/pg-core";
 
 /* ─────────────────────────── Acceso ─────────────────────────── */
@@ -60,6 +60,10 @@ export const origen = pgEnum("origen", ["web", "instagram", "recomendacion", "co
 
 export const paciente = pgTable("paciente", {
   id: uuid("id").primaryKey().defaultRandom(),
+  /* Número de cliente, correlativo y automático. El identificador interno es el
+     uuid; este es el que se dice en voz alta y se escribe en una factura, y por
+     eso tiene que ser corto y en orden de llegada. */
+  numero: serial("numero").notNull(),
   nombre: text("nombre").notNull(),
   apellidos: text("apellidos"),
   email: text("email"),
@@ -165,8 +169,14 @@ export const acto = pgTable("acto", {
   zonas: text("zonas"),
   dosis: text("dosis"),
   notas: text("notas"),
+  /* Cuándo toca repetirlo. Va en el acto y no en el tratamiento porque el plazo
+     lo decide el médico viendo al paciente: el mismo tratamiento dura distinto
+     en dos personas. */
+  recordarEn: date("recordar_en"),
+  recordado: boolean("recordado").notNull().default(false),
   creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index("acto_paciente").on(t.pacienteId), index("acto_fecha").on(t.fecha)]);
+}, (t) => [index("acto_paciente").on(t.pacienteId), index("acto_fecha").on(t.fecha),
+           index("acto_recordar").on(t.recordarEn)]);
 
 export const nota = pgTable("nota", {
   id: uuid("id").primaryKey().defaultRandom(),

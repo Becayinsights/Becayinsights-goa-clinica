@@ -21,6 +21,7 @@ const Paciente = z.object({
   email: z.union([z.string().trim().email("Ese correo no es válido."), z.literal("")]).optional(),
   telefono: z.string().trim().optional(),
   fechaNacimiento: z.string().trim().optional(),
+  documento: z.string().trim().optional(),
   motivo: z.string().trim().optional(),
   origen: z.enum(["web", "instagram", "recomendacion", "consulta", "otro"]).default("consulta"),
 });
@@ -37,6 +38,7 @@ export async function crearPaciente(_previo: string | null, datos: FormData): Pr
   const [p] = await db.insert(e.paciente).values({
     nombre: d.nombre, apellidos: vacio(d.apellidos), email: vacio(d.email),
     telefono: vacio(d.telefono), fechaNacimiento: vacio(d.fechaNacimiento),
+    documento: vacio(d.documento?.toUpperCase()),
     motivo: vacio(d.motivo), origen: d.origen, estado: "lead",
   }).returning({ id: e.paciente.id });
 
@@ -53,6 +55,7 @@ export async function guardarPaciente(id: string, datos: FormData) {
     email: vacio(String(datos.get("email") ?? "").trim()),
     telefono: vacio(String(datos.get("telefono") ?? "").trim()),
     fechaNacimiento: vacio(String(datos.get("fechaNacimiento") ?? "").trim()),
+    documento: vacio(String(datos.get("documento") ?? "").trim().toUpperCase()),
     alergias: vacio(String(datos.get("alergias") ?? "").trim()),
     antecedentes: vacio(String(datos.get("antecedentes") ?? "").trim()),
     notas: vacio(String(datos.get("notas") ?? "").trim()),
@@ -97,6 +100,16 @@ export async function citar(pacienteId: string, datos: FormData) {
   revalidatePath("/"); revalidatePath(`/pacientes/${pacienteId}`);
 }
 
+/* Dar por visto un recordatorio: se ha llamado al paciente o se ha citado, y ya
+   no tiene que seguir saltando. */
+export async function silenciarRecordatorio(actoId: string) {
+  const u = await exigirUsuario();
+  const db = await bd();
+  await db.update(e.acto).set({ recordado: true }).where(eq(e.acto.id, actoId));
+  await registrar(u.id, "editar", "acto", actoId, "recordatorio atendido");
+  revalidatePath("/");
+}
+
 export async function cambiarCita(citaId: string, estado: string) {
   const u = await exigirUsuario();
   const db = await bd();
@@ -124,6 +137,7 @@ export async function apuntarActo(pacienteId: string, datos: FormData) {
     zonas: vacio(String(datos.get("zonas") ?? "").trim()),
     dosis: vacio(String(datos.get("dosis") ?? "").trim()),
     notas: vacio(String(datos.get("notas") ?? "").trim()),
+    recordarEn: enMeses(fecha, String(datos.get("recordarMeses") ?? "")),
   }).returning({ id: e.acto.id });
 
   /* Si se cobró en el momento, el cobro nace pegado al acto: así el dinero
@@ -159,6 +173,18 @@ export async function apuntarCobro(pacienteId: string, datos: FormData) {
   }).returning({ id: e.cobro.id });
   await registrar(u.id, "crear", "cobro", c.id, `paciente ${pacienteId}`);
   revalidatePath(`/pacientes/${pacienteId}`); revalidatePath("/cobros");
+}
+
+/* "Repetir a los cinco meses" se guarda como la fecha en la que toca, no como
+   un número de meses: así basta con mirar qué recordatorios caen hoy, sin tener
+   que recalcular plazos contra cada acto cada vez que se abre el panel. */
+function enMeses(desde: string, meses: string): string | null {
+  const n = Number(meses);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const d = desde ? new Date(desde) : new Date();
+  const fin = new Date(d);
+  fin.setMonth(fin.getMonth() + n);
+  return fin.toISOString().slice(0, 10);
 }
 
 /* "1.250,50" y "1250.5" son lo mismo escrito por dos personas distintas. Se

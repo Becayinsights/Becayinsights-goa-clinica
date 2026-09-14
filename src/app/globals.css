@@ -213,3 +213,10 @@ textarea{min-height:88px;resize:vertical;line-height:1.5}
 .cobros{list-style:none;padding:0;margin:12px 0 0;font-size:var(--fs-3)}
 .cobros li{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid var(--rule)}
 .cobros em{display:block;font-style:normal;font-family:var(--mono);font-size:var(--fs-1);margin-top:2px}
+
+/* El recordatorio va en el color de aviso: es lo único de la tarjeta de un acto
+   que pide hacer algo, y el resto es historia ya cerrada. */
+.recordatorio{
+  margin-top:10px;font-family:var(--mono);font-size:var(--fs-2);
+  color:var(--aviso);background:var(--aviso-bg);border-radius:2px;padding:6px 9px;display:inline-block;
+}

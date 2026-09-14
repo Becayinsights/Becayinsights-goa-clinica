@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { and, asc, desc, eq, gte, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lt, lte, isNotNull } from "drizzle-orm";
 import { bd } from "@/db";
 import * as e from "@/db/esquema";
 import { exigirUsuario } from "@/lib/sesion";
-import { diaLargo, hora, diaHora, limitesDelDia } from "@/lib/formato";
-import { cambiarCita } from "./acciones";
+import { diaLargo, hora, dia, diaHora, limitesDelDia } from "@/lib/formato";
+import { cambiarCita, silenciarRecordatorio } from "./acciones";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +33,21 @@ export default async function Hoy() {
     .leftJoin(e.tratamiento, eq(e.tratamiento.id, e.cita.tratamientoId))
     .where(eq(e.cita.estado, "solicitada"))
     .orderBy(asc(e.cita.inicio)).limit(10);
+
+  /* Lo que toca repetir. Se mira con quince días de margen porque a un paciente
+     hay que llamarle antes de que se le pase el efecto, no el mismo día. */
+  const horizonte = new Date(Date.now() + 15 * 86400_000).toISOString().slice(0, 10);
+  const recordatorios = await db.select({
+      id: e.acto.id, cuando: e.acto.recordarEn, tratamiento: e.tratamiento.nombre,
+      pacienteId: e.paciente.id, paciente: e.paciente.nombre, apellidos: e.paciente.apellidos,
+      telefono: e.paciente.telefono,
+    })
+    .from(e.acto)
+    .innerJoin(e.paciente, eq(e.paciente.id, e.acto.pacienteId))
+    .leftJoin(e.tratamiento, eq(e.tratamiento.id, e.acto.tratamientoId))
+    .where(and(isNotNull(e.acto.recordarEn), lte(e.acto.recordarEn, horizonte),
+               eq(e.acto.recordado, false)))
+    .orderBy(asc(e.acto.recordarEn)).limit(10);
 
   const nuevos = await db.select().from(e.paciente)
     .where(eq(e.paciente.estado, "lead")).orderBy(desc(e.paciente.creadoEn)).limit(8);
@@ -77,6 +92,31 @@ export default async function Hoy() {
           </table>
         )}
       </section>
+
+      {recordatorios.length > 0 && (
+        <section style={{ marginBottom: 34 }}>
+          <h2 style={{ marginBottom: 12 }}>Toca repetir</h2>
+          <div className="rejilla" style={{ gap: 8 }}>
+            {recordatorios.map((r) => (
+              <div className="tarjeta" key={r.id}
+                   style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                <div>
+                  <Link href={`/pacientes/${r.pacienteId}`} style={{ textDecoration: "none", fontWeight: 500 }}>
+                    {r.paciente} {r.apellidos ?? ""}
+                  </Link>
+                  <div className="silencio" style={{ fontSize: "var(--fs-3)" }}>
+                    {r.tratamiento ?? "Tratamiento"} · desde el {dia(new Date(`${r.cuando}T12:00:00Z`))}
+                    {r.telefono ? ` · ${r.telefono}` : ""}
+                  </div>
+                </div>
+                <form action={silenciarRecordatorio.bind(null, r.id)}>
+                  <button className="btn linea mini">Ya avisado</button>
+                </form>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="rejilla dos">
         <section>

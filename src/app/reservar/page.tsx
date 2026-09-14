@@ -44,7 +44,9 @@ export default async function Reservar({ searchParams }: {
             {tratamientos.map((x) => (
               <Link className="opcion" key={x.id} href={`/reservar?t=${x.slug}`}>
                 <span>{x.nombre}</span>
-                <span className="silencio">{x.duracionMin} min · {x.precioTexto ?? "a valorar"}</span>
+                {/* Sin el tiempo: quien pide cita quiere saber qué le cuesta,
+                    no cuántos minutos ocupa en la agenda del doctor. */}
+                <span className="silencio">{x.precioTexto ?? "A valorar"}</span>
               </Link>
             ))}
           </div>
@@ -95,9 +97,7 @@ async function Huecos({ tratamiento, dia, mes }: {
   return (
     <>
       <h1>{tratamiento.nombre}</h1>
-      <p className="entrada">
-        Elige el día y la hora que mejor te venga. La cita dura {tratamiento.duracionMin} minutos.
-      </p>
+      <p className="entrada">Elige el día y la hora que mejor te venga.</p>
       <Calendario slug={tratamiento.slug} dias={dias} mes={visible} elegido={marcado} />
       <p style={{ marginTop: 26 }}>
         <Link className="silencio" href="/reservar">← Elegir otro tratamiento</Link>

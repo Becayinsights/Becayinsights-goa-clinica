@@ -22,15 +22,6 @@ export function aCentimos(texto?: string): number | null {
   return +m[1] * 100 + (m[2] ? +m[2].padEnd(2, "0") : 0);
 }
 
-/* Cuánto ocupa en agenda. La web no lo dice porque al paciente no le sirve,
-   pero la agenda no puede funcionar sin ello. */
-function duracion(slug: string, area: string): number {
-  if (area === "cirugia") return 480;                       // jornada de quirófano
-  if (slug.includes("valoracion")) return 30;
-  if (slug.includes("armonizacion")) return 90;
-  return 45;
-}
-
 export async function sembrarCatalogo(db: BD): Promise<number> {
   let orden = 0, n = 0;
   for (const area of (catalogo as any).areas) {
@@ -41,7 +32,10 @@ export async function sembrarCatalogo(db: BD): Promise<number> {
         area: AREAS[area.id],
         precioTexto: (t.precio_corto ?? t.precio ?? null) as string | null,
         precioCents: aCentimos(t.precio),
-        duracionMin: duracion(t.slug, area.id),
+        /* La duración viene del catálogo, que es donde el doctor la decide. Se
+           adivinaba por el nombre del tratamiento, y adivinar cuánto dura un
+           acto médico a partir de su slug era pedir un error. */
+        duracionMin: (t.duracion_min as number) ?? 30,
         /* Online solo lo que es una primera visita. Un injerto no se reserva
            desde una web: se decide en consulta. */
         reservableOnline: area.id !== "cirugia",
@@ -60,7 +54,7 @@ export async function sembrarHorario(db: BD): Promise<boolean> {
   await db.insert(e.horario).values(
     [1, 2, 3, 4, 5].flatMap((d) => [
       { diaSemana: d, desde: "10:00:00", hasta: "14:00:00" },
-      { diaSemana: d, desde: "16:00:00", hasta: "20:00:00" },
+      { diaSemana: d, desde: "16:00:00", hasta: "20:30:00" },
     ]),
   );
   return true;

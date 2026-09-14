@@ -18,6 +18,8 @@ export function Alta() {
           <input id="email" name="email" type="email" /></div>
         <div className="campo"><label htmlFor="fechaNacimiento">Fecha de nacimiento</label>
           <input id="fechaNacimiento" name="fechaNacimiento" type="date" /></div>
+        <div className="campo"><label htmlFor="documento">DNI o NIE</label>
+          <input id="documento" name="documento" autoCapitalize="characters" /></div>
         <div className="campo"><label htmlFor="origen">Cómo llegó</label>
           <select id="origen" name="origen" defaultValue="consulta">
             <option value="consulta">En consulta</option>
